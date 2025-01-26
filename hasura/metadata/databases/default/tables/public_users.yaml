@@ -1,0 +1,70 @@
+table:
+  name: users
+  schema: public
+configuration:
+  custom_root_fields: {}
+  custom_column_names: {}
+array_relationships:
+  - name: accounts
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: accounts
+          schema: public
+  - name: sessions
+    using:
+      foreign_key_constraint_on:
+        column: user_id
+        table:
+          name: sessions
+          schema: public
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - id
+        - name
+        - email
+        - image
+        - email_verified
+        - created_at
+        - updated_at
+      filter:
+        id:
+          _eq: X-Hasura-User-Id
+  - role: auth_service
+    permission:
+      columns:
+        - id
+        - name
+        - email
+        - image
+        - email_verified
+        - created_at
+        - updated_at
+      filter: {}
+insert_permissions:
+  - role: auth_service
+    permission:
+      check: {}
+      columns:
+        - id
+        - name
+        - email
+        - password
+        - image
+        - email_verified
+        - created_at
+        - updated_at
+update_permissions:
+  - role: user
+    permission:
+      columns:
+        - name
+        - email
+        - image
+      filter:
+        id:
+          _eq: X-Hasura-User-Id
+      check: null

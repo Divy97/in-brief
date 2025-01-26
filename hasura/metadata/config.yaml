@@ -1,0 +1,15 @@
+version: 3
+endpoint: http://localhost:8082
+admin_secret: 65389efb3c9fbf86e0ec366a614eaeed05bfe9b81704fa6980aae73213285680
+api_paths:
+  v1_query: v1/query
+  v2_query: v2/query
+  v1_metadata: v1/metadata
+  graphql: v1/graphql
+metadata_directory: metadata
+migrations_directory: migrations
+seeds_directory: seeds
+actions:
+  kind: synchronous
+  handler_webhook_baseurl: http://localhost:3000
+allow_list: []

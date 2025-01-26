@@ -1,0 +1,21 @@
+table:
+  name: verification_tokens
+  schema: public
+select_permissions:
+  - role: user
+    permission:
+      columns:
+        - identifier
+        - token
+        - expires
+        - createdAt
+        - updatedAt
+      filter: {}
+update_permissions:
+  - role: user
+    permission:
+      columns:
+        - expires
+        - updatedAt
+      filter: {}
+      check: null

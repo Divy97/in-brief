@@ -1,0 +1,7 @@
+version: 3
+endpoint: http://localhost:8082
+admin_secret: 65389efb3c9fbf86e0ec366a614eaeed05bfe9b81704fa6980aae73213285680
+metadata_directory: metadata
+migrations_directory: migrations
+actions_directory: actions
+seeds_directory: seeds
