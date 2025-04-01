@@ -1,27 +1,15 @@
-import DeployButton from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import HeaderAuth from "@/components/header-auth";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import { Geist } from "next/font/google";
-import { ThemeProvider } from "next-themes";
-import Link from "next/link";
 import "./globals.css";
+import Link from "next/link";
 
-const defaultUrl = process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
-
-export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with Next.js and Supabase",
-};
-
-const geistSans = Geist({
-  display: "swap",
+const geist = Geist({
   subsets: ["latin"],
 });
+
+export const metadata = {
+  title: "Quizify - Generate Smart Questionnaires",
+  description: "Transform articles and videos into interactive questionnaires",
+};
 
 export default function RootLayout({
   children,
@@ -29,48 +17,41 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <main className="min-h-screen flex flex-col items-center">
-            <div className="flex-1 w-full flex flex-col gap-20 items-center">
-              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
-                <div className="w-full max-w-5xl flex justify-between items-center p-3 px-5 text-sm">
-                  <div className="flex gap-5 items-center font-semibold">
-                    <Link href={"/"}>Next.js Supabase Starter</Link>
-                    <div className="flex items-center gap-2">
-                      <DeployButton />
-                    </div>
-                  </div>
-                  {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
+    <html lang="en" className={geist.className}>
+      <body className="bg-white text-slate-900 antialiased">
+        <div className="min-h-screen flex flex-col">
+          {/* Navbar */}
+          <nav className="border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+            <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex h-16 items-center justify-between">
+                <div className="flex items-center gap-x-8">
+                  <Link href="/" className="flex items-center gap-2">
+                    <span className="text-xl font-semibold">Quizify</span>
+                  </Link>
                 </div>
-              </nav>
-              <div className="flex flex-col gap-20 max-w-5xl p-5">
-                {children}
               </div>
-
-              <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-                <p>
-                  Powered by{" "}
-                  <a
-                    href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-                    target="_blank"
-                    className="font-bold hover:underline"
-                    rel="noreferrer"
-                  >
-                    Supabase
-                  </a>
-                </p>
-                <ThemeSwitcher />
-              </footer>
             </div>
-          </main>
-        </ThemeProvider>
+          </nav>
+
+          {/* Main content */}
+          <main className="flex-1">{children}</main>
+
+          {/* Footer */}
+          <footer className="border-t py-6 md:py-0">
+            <div className="container flex flex-col items-center justify-between gap-4 md:h-16 md:flex-row">
+              <p className="text-sm text-slate-500">
+                Build by{" "}
+                <Link
+                  href="https://github.com/Divy97"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  DIvy Parekh
+                </Link>
+              </p>
+            </div>
+          </footer>
+        </div>
       </body>
     </html>
   );

@@ -1,0 +1,1 @@
+- we are building an website using NEXTJS and SUPABASE where user will paste link of an article or youtbe video and we will generate questionnaire for him
