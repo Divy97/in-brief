@@ -7,10 +7,10 @@ import { CheckCircle2, XCircle } from "lucide-react"; // Icons for feedback
 
 interface QuizQuestionCardProps {
   question: QuizQuestion;
-  selectedOptionId?: string; // The ID of the currently selected option for this question
-  onOptionSelect: (questionId: string, optionId: string) => void; // Callback when an option is selected
-  showFeedback: boolean; // New prop: Whether to show feedback for this card
-  isCorrect?: boolean; // New prop: Was the selected answer correct?
+  selectedOptionId?: number;
+  onOptionSelect: (questionId: string, optionIndex: number) => void;
+  showFeedback: boolean;
+  isCorrect?: boolean;
 }
 
 export function QuizQuestionCard({
@@ -20,8 +20,6 @@ export function QuizQuestionCard({
   showFeedback,
   isCorrect,
 }: QuizQuestionCardProps) {
-  const correctOptionId = question.correctOptionId;
-
   return (
     <Card className="w-full shadow-sm border border-slate-200 bg-white mt-4">
       <CardHeader>
@@ -38,14 +36,16 @@ export function QuizQuestionCard({
       </CardHeader>
       <CardContent>
         <RadioGroup
-          value={selectedOptionId}
-          onValueChange={(optionId) => onOptionSelect(question.id, optionId)}
+          value={selectedOptionId?.toString()}
+          onValueChange={(value) =>
+            onOptionSelect(question.id, parseInt(value, 10))
+          }
           className="flex flex-col space-y-3"
           disabled={showFeedback} // Disable radio group when feedback is shown
         >
-          {question.options.map((option) => {
-            const isSelected = selectedOptionId === option.id;
-            const isCorrectOption = correctOptionId === option.id;
+          {question.options.map((option, index) => {
+            const isSelected = selectedOptionId === index;
+            const isCorrectOption = question.correctAnswer === index;
 
             return (
               <div
@@ -72,7 +72,7 @@ export function QuizQuestionCard({
                 )}
               >
                 <RadioGroupItem
-                  value={option.id}
+                  value={index.toString()}
                   id={option.id}
                   className={cn(
                     "border-slate-300 text-blue-600 focus:ring-blue-500",

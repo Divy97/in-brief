@@ -7,13 +7,29 @@ export interface QuizQuestion {
   id: string; // Unique ID for the question (e.g., "q1")
   questionText: string; // The main text of the question
   options: QuizQuestionOption[]; // Array of possible answers
-  correctOptionId?: string; // Optional: We'll add this later for scoring
+  correctAnswer: number;
 }
 
 export interface QuizData {
-  title: string; // Title for the quiz (e.g., based on the source article/video)
-  questions: QuizQuestion[]; // Array of questions
+  id: string;
+  title: string;
+  description: string;
+  questions: Question[];
+}
+
+export interface Question {
+  id: string;
+  questionText: string;
+  options: QuizQuestionOption[];
+  correctAnswer: number;
 }
 
 // Type for storing user answers, mapping question ID to selected option ID
-export type UserAnswers = Record<string, string>;
+export type UserAnswers = Record<string, number>;
+
+export interface QuizResult {
+  answers: UserAnswers;
+  quiz_id: string;
+  user_id?: string;
+  created_at?: string;
+}

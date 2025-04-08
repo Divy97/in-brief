@@ -1,116 +1,133 @@
-"use client"; // This page needs client-side logic for sessionStorage and state
+"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QuizContainer } from "@/components/quiz/quiz-container";
-import { type QuizData, type UserAnswers } from "@/types/quiz";
-import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { QuizWrapper } from "./QuizWrapper";
+import { useQuizManager } from "@/hooks/useQuizManager";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { useProfile } from "@/hooks/useProfile";
 
-const QUIZ_DATA_SESSION_KEY = "quizData"; // Use the same key
+interface QuizData {
+  title: string;
+  questions: Array<{
+    question: string;
+    options: string[];
+    correct_answer: string;
+    explanation?: string;
+  }>;
+}
 
 export default function QuizPage() {
   const [quizData, setQuizData] = useState<QuizData | null>(null);
+  const [quizId, setQuizId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  const { isAuthenticated } = useAuthContext();
+  const { getQuizDetails, saveQuizResult } = useQuizManager();
+  const { profile } = useProfile();
+
   useEffect(() => {
-    try {
-      const storedData = sessionStorage.getItem(QUIZ_DATA_SESSION_KEY);
-      if (storedData) {
-        const parsedData: QuizData = JSON.parse(storedData);
-        // Basic validation (check if it has questions array)
-        if (parsedData && Array.isArray(parsedData.questions)) {
-          setQuizData(parsedData);
-        } else {
-          console.error("Invalid quiz data found in sessionStorage.");
-          setError("Failed to load quiz data. Please try generating again.");
+    const loadQuiz = async () => {
+      try {
+        // Get quiz ID from session storage
+        const storedQuizId = sessionStorage.getItem("currentQuizId");
+        if (!storedQuizId) {
+          router.push("/");
+          return;
         }
-      } else {
-        // No data found, maybe direct navigation or data expired
-        setError("No quiz data found. Please generate a quiz first.");
-        // Optional: Redirect back immediately
-        // router.replace('/');
+        setQuizId(storedQuizId);
+
+        // Load quiz details from database
+        const { quiz, questions } = await getQuizDetails(storedQuizId);
+
+        setQuizData({
+          title: quiz.title,
+          questions: questions.map((q) => ({
+            question: q.question,
+            options: q.options,
+            correct_answer: q.correct_answer,
+            explanation: q.explanation,
+          })),
+        });
+      } catch (err: any) {
+        console.error("Error loading quiz:", err);
+        setError(err.message || "Failed to load quiz");
+      } finally {
+        setIsLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to load or parse quiz data:", err);
-      setError("An error occurred while loading the quiz.");
-    } finally {
-      setIsLoading(false);
+    };
+
+    loadQuiz();
+  }, [router, getQuizDetails]);
+
+  const handleQuizComplete = async (answers: Record<string, string>) => {
+    if (!quizId || !quizData) return;
+
+    try {
+      // Calculate score
+      const totalQuestions = quizData.questions.length;
+      const correctAnswers = quizData.questions.reduce((count, q, index) => {
+        return answers[index.toString()] === q.correct_answer
+          ? count + 1
+          : count;
+      }, 0);
+      const score = (correctAnswers / totalQuestions) * 100;
+
+      // Save quiz result
+      await saveQuizResult(quizId, score, answers);
+
+      // Clear session storage
+      sessionStorage.removeItem("currentQuizId");
+      sessionStorage.removeItem("quizData");
+
+      // Redirect to results or prompt sign up
+      if (!isAuthenticated) {
+        router.push("/sign-up?redirect_to=/profile");
+      } else {
+        router.push("/profile");
+      }
+    } catch (err: any) {
+      console.error("Error saving quiz result:", err);
+      setError(err.message || "Failed to save quiz result");
     }
-
-    // Optional: Clear sessionStorage when the user navigates away from the quiz page
-    // This prevents stale data if they use back/forward buttons later.
-    // return () => {
-    //   sessionStorage.removeItem(QUIZ_DATA_SESSION_KEY);
-    // };
-  }, []); // Removed router dependency as it's not needed here anymore
-
-  const handleQuizComplete = (answers: UserAnswers) => {
-    console.log("Quiz completed on page:", answers);
-    // TODO: Implement results display or navigation
-    // Maybe store results in sessionStorage and navigate to /quiz/results
-    // For now, we just show the completion state within QuizContainer
-    sessionStorage.removeItem(QUIZ_DATA_SESSION_KEY); // Clean up after completion
   };
-
-  const handleResetAndNavigateHome = () => {
-    sessionStorage.removeItem(QUIZ_DATA_SESSION_KEY); // Clean up storage
-    router.push("/"); // Navigate to homepage
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen text-center p-4">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={() => router.push("/")} variant="outline">
-          Go Home
-        </Button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
+          <p className="text-gray-600">{error}</p>
+          <button
+            onClick={() => router.push("/")}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Return Home
+          </button>
+        </div>
       </div>
     );
   }
 
-  if (!quizData) {
-    // Should ideally be caught by the error state, but as a fallback:
+  if (isLoading || !quizData) {
     return (
-      <div className="flex flex-col justify-center items-center min-h-screen text-center p-4">
-        <p className="text-slate-600 mb-4">Could not load quiz.</p>
-        <Button onClick={() => router.push("/")} variant="outline">
-          Go Home
-        </Button>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <p className="text-gray-600">Loading quiz...</p>
+        </div>
       </div>
     );
   }
 
-  // --- Updated Render Logic ---
   return (
-    // Use padding on the main container for spacing
-    <main className="container mx-auto px-4 py-12 md:py-16 lg:py-20">
-      {/* Quiz Header Section */}
-      <div className="mb-8 md:mb-12 text-center border-b pb-4">
-        <p className="text-sm text-slate-500 mb-1">Quiz based on:</p>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-          {quizData.title}
-        </h1>
-      </div>
-
-      {/* Quiz Container Wrapper (centers the container) */}
-      <div className="flex justify-center">
-        <QuizContainer
-          quizData={quizData}
-          onQuizComplete={handleQuizComplete}
-          onReset={handleResetAndNavigateHome}
-        />
-      </div>
-    </main>
+    <div className="container mx-auto px-4 py-8">
+      <QuizWrapper
+        quizData={quizData}
+        onComplete={handleQuizComplete}
+        userProfile={profile}
+      />
+    </div>
   );
 }

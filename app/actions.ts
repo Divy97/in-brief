@@ -14,6 +14,7 @@ import Parser from "rss-parser";
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
+  const redirectTo = formData.get("redirect_to")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
@@ -25,23 +26,57 @@ export const signUpAction = async (formData: FormData) => {
     );
   }
 
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
-  });
+  // Check if we have an anonymous session
+  const { data: { session } } = await supabase.auth.getSession();
+  const isAnonymousUser = session?.user && !session.user.email;
 
-  if (error) {
-    console.error(error.code + " " + error.message);
-    return encodedRedirect("error", "/sign-up", error.message);
+  if (isAnonymousUser) {
+    // If we have an anonymous user, update their email and password
+    const { error: updateError } = await supabase.auth.updateUser({
+      email,
+      password,
+      data: {
+        email_confirmed: true,
+      }
+    });
+
+    if (updateError) {
+      console.error(updateError.code + " " + updateError.message);
+      return encodedRedirect("error", "/sign-up", updateError.message);
+    }
+
+    // Redirect to the quiz page or specified redirect URL
+    return redirect(redirectTo || "/quiz");
   } else {
-    return encodedRedirect(
-      "success",
-      "/sign-up",
-      "Thanks for signing up! Please check your email for a verification link."
-    );
+    // For new users, create a new account
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${origin}/auth/callback`,
+        data: {
+          email_confirmed: true,
+        },
+      },
+    });
+
+    if (error) {
+      console.error(error.code + " " + error.message);
+      return encodedRedirect("error", "/sign-up", error.message);
+    }
+
+    // Sign in the user immediately
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (signInError) {
+      return encodedRedirect("error", "/sign-up", signInError.message);
+    }
+
+    // Redirect to the quiz page or specified redirect URL
+    return redirect(redirectTo || "/quiz");
   }
 };
 
@@ -339,7 +374,7 @@ async function generateQuizWithLLM(
           ],
           "correctOptionId": "q1-optX" // The id of the correct option (e.g., "q1-opt2")
         },
-        // ... more questions
+        // give 5 - 7 more questions
       ]
     }
 

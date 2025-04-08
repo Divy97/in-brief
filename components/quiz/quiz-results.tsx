@@ -10,107 +10,119 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress"; // Use Progress for score visualization
 import { RefreshCw, RotateCcw, Award, Check, X } from "lucide-react"; // Icons
+import { CheckCircle, XCircle } from "lucide-react";
 
 interface QuizResultsProps {
   quizData: QuizData;
   userAnswers: UserAnswers;
   onRetake: () => void;
-  onGenerateNew: () => void;
+  onReset: () => void;
 }
 
 export function QuizResults({
   quizData,
   userAnswers,
   onRetake,
-  onGenerateNew,
+  onReset,
 }: QuizResultsProps) {
   // Calculate score
-  const { score, totalQuestions, percentage } = useMemo(() => {
-    let correctAnswers = 0;
-    const total = quizData.questions.length;
-    quizData.questions.forEach((q) => {
-      if (q.correctOptionId && userAnswers[q.id] === q.correctOptionId) {
-        correctAnswers++;
-      }
-    });
-    const perc = total > 0 ? Math.round((correctAnswers / total) * 100) : 0;
-    return { score: correctAnswers, totalQuestions: total, percentage: perc };
-  }, [quizData, userAnswers]);
+  const correctAnswers = quizData.questions.filter(
+    (q) => userAnswers[q.id] === q.correctAnswer
+  ).length;
+  const totalQuestions = quizData.questions.length;
+  const score = Math.round((correctAnswers / totalQuestions) * 100);
 
   // Determine feedback message based on score
   const feedbackMessage = useMemo(() => {
-    if (percentage === 100) return "Perfect Score! Outstanding!";
-    if (percentage >= 80) return "Excellent Job!";
-    if (percentage >= 60) return "Good Effort!";
-    if (percentage >= 40) return "Keep Practicing!";
+    if (score === 100) return "Perfect Score! Outstanding!";
+    if (score >= 80) return "Excellent Job!";
+    if (score >= 60) return "Good Effort!";
+    if (score >= 40) return "Keep Practicing!";
     return "Better Luck Next Time!";
-  }, [percentage]);
+  }, [score]);
 
   return (
-    <Card className="w-full max-w-2xl mx-auto mt-8 shadow-lg border border-slate-200">
-      <CardHeader className="text-center">
-        <Award className="mx-auto h-12 w-12 text-yellow-500 mb-3" />
-        <CardTitle className="text-2xl font-bold text-slate-800">
-          Quiz Complete!
-        </CardTitle>
-        <CardDescription className="text-lg text-slate-600 pt-1">
-          {feedbackMessage}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col items-center gap-6">
-        {/* Score Display */}
-        <div className="text-center">
-          <p className="text-sm text-slate-500">Your Score</p>
-          <p className="text-4xl font-bold text-blue-600">
-            {score} / {totalQuestions}
-          </p>
-          <p className="text-sm text-slate-500">({percentage}%)</p>
-        </div>
+    <div className="space-y-8">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-slate-900">Quiz Results</h1>
+        <p className="mt-2 text-slate-600">
+          You scored {score}% ({correctAnswers} out of {totalQuestions} correct)
+        </p>
+      </div>
 
-        {/* Progress Bar for Score */}
-        <div className="w-3/4">
-          <Progress value={percentage} className="h-3 [&>*]:bg-blue-600" />
-        </div>
+      <div className="space-y-4">
+        {quizData.questions.map((question, index) => {
+          const isCorrect = userAnswers[question.id] === question.correctAnswer;
+          const userAnswer = userAnswers[question.id];
 
-        {/* Optional: Detailed Results Summary (Example) */}
-        {/*
-        <div className="w-full mt-4 border-t pt-4">
-            <h4 className="text-md font-semibold mb-2 text-slate-700">Summary:</h4>
-            <ul className="space-y-1 text-sm">
-                {quizData.questions.map((q, index) => {
-                    const userAnswerId = userAnswers[q.id];
-                    const isCorrect = q.correctOptionId === userAnswerId;
-                    return (
-                        <li key={q.id} className="flex items-center gap-2">
-                            {isCorrect ? <Check className="h-4 w-4 text-green-600" /> : <X className="h-4 w-4 text-red-600" />}
-                            <span>Question {index + 1}: {isCorrect ? 'Correct' : 'Incorrect'}</span>
-                        </li>
-                    );
-                })}
-            </ul>
-        </div>
-        */}
+          return (
+            <Card key={question.id} className="p-6">
+              <div className="space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-slate-500">
+                      Question {index + 1}
+                    </span>
+                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                      {question.questionText}
+                    </h2>
+                  </div>
+                  {isCorrect ? (
+                    <CheckCircle className="h-6 w-6 text-green-500" />
+                  ) : (
+                    <XCircle className="h-6 w-6 text-red-500" />
+                  )}
+                </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full justify-center">
-          <Button
-            onClick={onRetake}
-            variant="outline"
-            className="border-blue-300 text-blue-600 hover:bg-blue-50 flex-1"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Retake Quiz
-          </Button>
-          <Button
-            onClick={onGenerateNew} // Navigates home
-            variant="outline"
-            className="border-slate-300 text-slate-600 hover:bg-slate-50 flex-1"
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Generate New Quiz
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+                <div className="grid gap-2">
+                  {question.options.map((option, optionIndex) => (
+                    <div
+                      key={option.id}
+                      className={`flex items-center rounded-lg border p-4 ${
+                        optionIndex === question.correctAnswer
+                          ? "border-green-500 bg-green-50"
+                          : optionIndex === userAnswer
+                            ? "border-red-500 bg-red-50"
+                            : "border-slate-200"
+                      }`}
+                    >
+                      <span
+                        className={`mr-4 inline-flex h-6 w-6 items-center justify-center rounded-full border text-sm font-medium ${
+                          optionIndex === question.correctAnswer
+                            ? "border-green-500 text-green-700"
+                            : optionIndex === userAnswer
+                              ? "border-red-500 text-red-700"
+                              : "border-slate-300 text-slate-600"
+                        }`}
+                      >
+                        {String.fromCharCode(65 + optionIndex)}
+                      </span>
+                      <span
+                        className={
+                          optionIndex === question.correctAnswer
+                            ? "text-green-700"
+                            : optionIndex === userAnswer
+                              ? "text-red-700"
+                              : "text-slate-600"
+                        }
+                      >
+                        {option.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-center gap-4">
+        <Button onClick={onRetake} variant="outline">
+          Retake Quiz
+        </Button>
+        <Button onClick={onReset}>Try Another Quiz</Button>
+      </div>
+    </div>
   );
 }

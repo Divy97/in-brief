@@ -48,15 +48,15 @@ export function QuizContainer({
   // Calculate if the current answer (if any) is correct
   const isCurrentAnswerCorrect = useMemo(() => {
     if (!currentQuestion || !userAnswers[currentQuestion.id]) return undefined;
-    return userAnswers[currentQuestion.id] === currentQuestion.correctOptionId;
+    return userAnswers[currentQuestion.id] === currentQuestion.correctAnswer;
   }, [currentQuestion, userAnswers]);
 
   // Handle option selection - hide feedback when a new option is chosen
-  const handleOptionSelect = (questionId: string, optionId: string) => {
+  const handleOptionSelect = (questionId: string, optionIndex: number) => {
     setShowFeedback(false); // Hide feedback for previous state if user changes answer
     setUserAnswers((prevAnswers) => ({
       ...prevAnswers,
-      [questionId]: optionId,
+      [questionId]: optionIndex,
     }));
   };
 
@@ -126,7 +126,7 @@ export function QuizContainer({
         quizData={quizData}
         userAnswers={userAnswers}
         onRetake={handleRetakeQuiz}
-        onGenerateNew={onReset} // onReset prop navigates home
+        onReset={onReset}
       />
     );
   }
