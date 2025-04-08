@@ -2,19 +2,24 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { QuizWrapper } from "./QuizWrapper";
 import { useQuizManager } from "@/hooks/useQuizManager";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { useProfile } from "@/hooks/useProfile";
+import { QuizContainer } from "@/components/quiz/quiz-container";
+import { Icons } from "@/components/ui/icons";
+
+interface QuizQuestion {
+  id: string;
+  questionText: string;
+  options: Array<{
+    id: string;
+    text: string;
+  }>;
+  correctAnswer: number;
+}
 
 interface QuizData {
   title: string;
-  questions: Array<{
-    question: string;
-    options: string[];
-    correct_answer: string;
-    explanation?: string;
-  }>;
+  questions: QuizQuestion[];
 }
 
 export default function QuizPage() {
@@ -26,7 +31,6 @@ export default function QuizPage() {
 
   const { isAuthenticated } = useAuthContext();
   const { getQuizDetails, saveQuizResult } = useQuizManager();
-  const { profile } = useProfile();
 
   useEffect(() => {
     const loadQuiz = async () => {
@@ -45,10 +49,15 @@ export default function QuizPage() {
         setQuizData({
           title: quiz.title,
           questions: questions.map((q) => ({
-            question: q.question,
-            options: q.options,
-            correct_answer: q.correct_answer,
-            explanation: q.explanation,
+            id: q.id,
+            questionText: q.question,
+            options: q.options.map((opt: string, index: number) => ({
+              id: `${q.id}-${index}`,
+              text: opt,
+            })),
+            correctAnswer: q.options.findIndex(
+              (opt: string) => opt === q.correct_answer
+            ),
           })),
         });
       } catch (err: any) {
@@ -62,32 +71,31 @@ export default function QuizPage() {
     loadQuiz();
   }, [router, getQuizDetails]);
 
-  const handleQuizComplete = async (answers: Record<string, string>) => {
+  const handleQuizComplete = async (answers: Record<string, number>) => {
     if (!quizId || !quizData) return;
 
     try {
       // Calculate score
       const totalQuestions = quizData.questions.length;
-      const correctAnswers = quizData.questions.reduce((count, q, index) => {
-        return answers[index.toString()] === q.correct_answer
-          ? count + 1
-          : count;
+      const correctAnswers = quizData.questions.reduce((count, q) => {
+        return answers[q.id] === q.correctAnswer ? count + 1 : count;
       }, 0);
       const score = (correctAnswers / totalQuestions) * 100;
 
+      // Convert answers to strings for database
+      const stringAnswers = Object.entries(answers).reduce(
+        (acc, [key, value]) => ({
+          ...acc,
+          [key]: value.toString(),
+        }),
+        {} as Record<string, string>
+      );
+
       // Save quiz result
-      await saveQuizResult(quizId, score, answers);
+      await saveQuizResult(quizId, score, stringAnswers);
 
       // Clear session storage
       sessionStorage.removeItem("currentQuizId");
-      sessionStorage.removeItem("quizData");
-
-      // Redirect to results or prompt sign up
-      if (!isAuthenticated) {
-        router.push("/sign-up?redirect_to=/profile");
-      } else {
-        router.push("/profile");
-      }
     } catch (err: any) {
       console.error("Error saving quiz result:", err);
       setError(err.message || "Failed to save quiz result");
@@ -96,7 +104,7 @@ export default function QuizPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 mt-14">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Error</h1>
           <p className="text-gray-600">{error}</p>
@@ -113,20 +121,20 @@ export default function QuizPage() {
 
   if (isLoading || !quizData) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">
-          <p className="text-gray-600">Loading quiz...</p>
+      <div className="container mx-auto px-4 py-8 mt-14">
+        <div className="flex justify-center">
+          <Icons.spinner className="h-6 w-6 animate-spin" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container m-auto px-4 py-8">
-      <QuizWrapper
+    <div className="h-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-50 px-4 py-6 sm:px-6 mt-14">
+      <QuizContainer
         quizData={quizData}
-        onComplete={handleQuizComplete}
-        userProfile={profile}
+        onQuizComplete={handleQuizComplete}
+        onReset={() => router.push("/")}
       />
     </div>
   );

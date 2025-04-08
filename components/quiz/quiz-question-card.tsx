@@ -9,7 +9,6 @@ interface QuizQuestionCardProps {
   question: QuizQuestion;
   selectedOptionId?: number;
   onOptionSelect: (questionId: string, optionIndex: number) => void;
-  showFeedback: boolean;
   isCorrect?: boolean;
 }
 
@@ -17,104 +16,98 @@ export function QuizQuestionCard({
   question,
   selectedOptionId,
   onOptionSelect,
-  showFeedback,
   isCorrect,
 }: QuizQuestionCardProps) {
   return (
-    <Card className="w-full shadow-sm border border-slate-200 bg-white mt-4">
-      <CardHeader>
-        <CardTitle className="text-lg font-semibold text-slate-800 flex items-center justify-between">
-          <span>{question.questionText}</span>
-          {/* Show feedback icon in header if feedback is active */}
-          {showFeedback && isCorrect === true && (
-            <CheckCircle2 className="h-6 w-6 text-green-600" />
-          )}
-          {showFeedback && isCorrect === false && (
-            <XCircle className="h-6 w-6 text-red-600" />
-          )}
+    <Card className="w-full shadow-lg border-0 bg-white rounded-xl overflow-hidden">
+      <CardHeader className="bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
+        <CardTitle className="text-xl font-semibold text-slate-800">
+          {question.questionText}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-6">
         <RadioGroup
-          value={selectedOptionId?.toString()}
+          value={
+            selectedOptionId !== undefined
+              ? selectedOptionId.toString()
+              : undefined
+          }
           onValueChange={(value) =>
             onOptionSelect(question.id, parseInt(value, 10))
           }
-          className="flex flex-col space-y-3"
-          disabled={showFeedback} // Disable radio group when feedback is shown
+          className="flex flex-col space-y-4"
+          disabled={selectedOptionId !== undefined}
         >
           {question.options.map((option, index) => {
             const isSelected = selectedOptionId === index;
-            const isCorrectOption = question.correctAnswer === index;
+            const isCorrectOption = index === question.correctAnswer;
+            const showFeedback = selectedOptionId !== undefined;
 
             return (
               <div
                 key={option.id}
-                // Apply conditional styling using cn
                 className={cn(
-                  "flex items-center space-x-3 p-3 rounded-md border border-slate-200 transition-colors",
-                  // Base hover/checked styles when feedback is NOT shown
+                  "relative overflow-hidden rounded-xl border-2 transition-all duration-300",
                   !showFeedback &&
-                    "hover:bg-slate-50 cursor-pointer has-[[data-state=checked]]:bg-slate-100 has-[[data-state=checked]]:border-slate-300",
-                  // Feedback styles when feedback IS shown
+                    "hover:border-blue-200 hover:bg-blue-50/30 border-slate-200",
                   showFeedback &&
                     isCorrectOption &&
-                    "border-green-500 bg-green-50 text-green-800", // Correct answer style
+                    "border-green-500 bg-green-50",
                   showFeedback &&
                     isSelected &&
                     !isCorrectOption &&
-                    "border-red-500 bg-red-50 text-red-800", // Incorrectly selected answer style
-                  showFeedback &&
-                    !isSelected &&
-                    !isCorrectOption &&
-                    "opacity-70", // Fade out other incorrect options
-                  showFeedback && "cursor-default" // Remove pointer cursor when feedback shown
+                    "border-red-500 bg-red-50"
                 )}
               >
-                <RadioGroupItem
-                  value={index.toString()}
-                  id={option.id}
-                  className={cn(
-                    "border-slate-300 text-blue-600 focus:ring-blue-500",
-                    // Style radio button based on feedback
-                    showFeedback &&
-                      isCorrectOption &&
-                      "border-green-600 text-green-600",
-                    showFeedback &&
-                      isSelected &&
-                      !isCorrectOption &&
-                      "border-red-600 text-red-600"
+                <div className="relative z-10 flex items-center p-4">
+                  <RadioGroupItem
+                    value={index.toString()}
+                    id={option.id}
+                    className={cn(
+                      "transition-colors duration-300",
+                      !showFeedback && "border-slate-300 text-blue-600",
+                      showFeedback &&
+                        isCorrectOption &&
+                        "border-green-500 text-green-600",
+                      showFeedback &&
+                        isSelected &&
+                        !isCorrectOption &&
+                        "border-red-500 text-red-600"
+                    )}
+                    disabled={showFeedback}
+                  />
+                  <Label
+                    htmlFor={option.id}
+                    className={cn(
+                      "flex-1 ml-4 font-medium transition-colors duration-300",
+                      !showFeedback &&
+                        "text-slate-700 cursor-pointer hover:text-slate-900",
+                      showFeedback && isCorrectOption && "text-green-800",
+                      showFeedback &&
+                        isSelected &&
+                        !isCorrectOption &&
+                        "text-red-800"
+                    )}
+                  >
+                    {option.text}
+                  </Label>
+                  {showFeedback && (isSelected || isCorrectOption) && (
+                    <div className="ml-4 animate-in fade-in slide-in-from-right-5 duration-300">
+                      {isCorrectOption ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <XCircle className="h-5 w-5 text-red-600" />
+                      )}
+                    </div>
                   )}
-                  disabled={showFeedback} // Also disable individual items
-                />
-                <Label
-                  htmlFor={option.id}
-                  className={cn(
-                    "font-normal text-slate-700 flex-1",
-                    !showFeedback && "cursor-pointer", // Only pointer when active
-                    showFeedback &&
-                      isCorrectOption &&
-                      "font-medium text-green-800",
-                    showFeedback &&
-                      isSelected &&
-                      !isCorrectOption &&
-                      "font-medium text-red-800",
-                    showFeedback && "cursor-default"
-                  )}
-                >
-                  {option.text}
-                </Label>
-                {/* Add icons directly to the option for feedback */}
-                {showFeedback && isSelected && isCorrectOption && (
-                  <CheckCircle2 className="h-5 w-5 text-green-600 ml-auto" />
-                )}
-                {showFeedback && isSelected && !isCorrectOption && (
-                  <XCircle className="h-5 w-5 text-red-600 ml-auto" />
-                )}
-                {showFeedback && !isSelected && isCorrectOption && (
-                  <span className="text-xs text-green-700 ml-auto">
-                    (Correct Answer)
-                  </span>
+                </div>
+                {showFeedback && (isSelected || isCorrectOption) && (
+                  <div
+                    className={cn(
+                      "absolute inset-0 opacity-10 animate-in fade-in duration-300",
+                      isCorrectOption ? "bg-green-500" : "bg-red-500"
+                    )}
+                  />
                 )}
               </div>
             );

@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { type QuizData, type UserAnswers } from "@/types/quiz";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -8,13 +7,31 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress"; // Use Progress for score visualization
-import { RefreshCw, RotateCcw, Award, Check, X } from "lucide-react"; // Icons
+import { Progress } from "@/components/ui/progress";
+import { RefreshCw, RotateCcw, Award, Check, X, History } from "lucide-react";
 import { CheckCircle, XCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useAuthContext } from "@/contexts/AuthContext";
+
+interface QuizQuestion {
+  id: string;
+  questionText: string;
+  options: Array<{
+    id: string;
+    text: string;
+  }>;
+  correctAnswer: number;
+}
+
+interface QuizData {
+  title: string;
+  questions: QuizQuestion[];
+}
 
 interface QuizResultsProps {
   quizData: QuizData;
-  userAnswers: UserAnswers;
+  userAnswers: Record<string, number>;
   onRetake: () => void;
   onReset: () => void;
 }
@@ -25,6 +42,9 @@ export function QuizResults({
   onRetake,
   onReset,
 }: QuizResultsProps) {
+  const router = useRouter();
+  const { isAuthenticated } = useAuthContext();
+
   // Calculate score
   const correctAnswers = quizData.questions.filter(
     (q) => userAnswers[q.id] === q.correctAnswer
@@ -75,41 +95,48 @@ export function QuizResults({
                 </div>
 
                 <div className="grid gap-2">
-                  {question.options.map((option, optionIndex) => (
-                    <div
-                      key={option.id}
-                      className={`flex items-center rounded-lg border p-4 ${
-                        optionIndex === question.correctAnswer
-                          ? "border-green-500 bg-green-50"
-                          : optionIndex === userAnswer
-                            ? "border-red-500 bg-red-50"
-                            : "border-slate-200"
-                      }`}
-                    >
-                      <span
-                        className={`mr-4 inline-flex h-6 w-6 items-center justify-center rounded-full border text-sm font-medium ${
-                          optionIndex === question.correctAnswer
-                            ? "border-green-500 text-green-700"
-                            : optionIndex === userAnswer
-                              ? "border-red-500 text-red-700"
-                              : "border-slate-300 text-slate-600"
-                        }`}
+                  {question.options.map((option, index) => {
+                    const isSelected = userAnswer === index;
+                    const isCorrectOption = index === question.correctAnswer;
+
+                    return (
+                      <div
+                        key={option.id}
+                        className={cn(
+                          "flex items-center rounded-lg border p-4",
+                          isCorrectOption
+                            ? "border-green-500 bg-green-50"
+                            : isSelected
+                              ? "border-red-500 bg-red-50"
+                              : "border-slate-200"
+                        )}
                       >
-                        {String.fromCharCode(65 + optionIndex)}
-                      </span>
-                      <span
-                        className={
-                          optionIndex === question.correctAnswer
-                            ? "text-green-700"
-                            : optionIndex === userAnswer
-                              ? "text-red-700"
-                              : "text-slate-600"
-                        }
-                      >
-                        {option.text}
-                      </span>
-                    </div>
-                  ))}
+                        <span
+                          className={cn(
+                            "mr-4 inline-flex h-6 w-6 items-center justify-center rounded-full border text-sm font-medium",
+                            isCorrectOption
+                              ? "border-green-500 text-green-700"
+                              : isSelected
+                                ? "border-red-500 text-red-700"
+                                : "border-slate-300 text-slate-600"
+                          )}
+                        >
+                          {String.fromCharCode(65 + parseInt(option.id, 10))}
+                        </span>
+                        <span
+                          className={cn(
+                            isCorrectOption
+                              ? "text-green-700"
+                              : isSelected
+                                ? "text-red-700"
+                                : "text-slate-600"
+                          )}
+                        >
+                          {option.text}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </Card>
@@ -119,9 +146,27 @@ export function QuizResults({
 
       <div className="flex justify-center gap-4">
         <Button onClick={onRetake} variant="outline">
+          <RotateCcw className="mr-2 h-4 w-4" />
           Retake Quiz
         </Button>
-        <Button onClick={onReset}>Try Another Quiz</Button>
+        <Button onClick={onReset}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Try Another Quiz
+        </Button>
+        {isAuthenticated ? (
+          <Button onClick={() => router.push("/profile")} variant="outline">
+            <History className="mr-2 h-4 w-4" />
+            View Quiz History
+          </Button>
+        ) : (
+          <Button
+            onClick={() => router.push("/sign-up?redirect_to=/profile")}
+            variant="outline"
+          >
+            <History className="mr-2 h-4 w-4" />
+            Sign Up to Save Progress
+          </Button>
+        )}
       </div>
     </div>
   );

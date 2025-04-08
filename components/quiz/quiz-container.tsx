@@ -1,25 +1,31 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { type QuizData, type UserAnswers } from "@/types/quiz"; // Import interfaces
+import { useState } from "react";
 import { QuizQuestionCard } from "./quiz-question-card";
-import { QuizProgressBar } from "./quiz-progress-bar"; // Import progress bar
-import { QuizResults } from "./quiz-results"; // Import QuizResults
+import { QuizResults } from "./quiz-results";
 import { Button } from "@/components/ui/button";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle,
-  RotateCcw,
-  RefreshCw,
-  Home,
-} from "lucide-react";
-import { cn } from "@/lib/utils"; // Import cn utility for conditional classes
+import { Home } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface QuizQuestion {
+  id: string;
+  questionText: string;
+  options: Array<{
+    id: string;
+    text: string;
+  }>;
+  correctAnswer: number;
+}
+
+interface QuizData {
+  title: string;
+  questions: QuizQuestion[];
+}
 
 interface QuizContainerProps {
   quizData: QuizData;
-  onQuizComplete: (answers: UserAnswers) => void; // Callback for when quiz is finished
-  onReset: () => void; // Callback to reset to the form view
+  onQuizComplete: (answers: Record<string, number>) => void;
+  onReset: () => void;
 }
 
 export function QuizContainer({
@@ -28,74 +34,36 @@ export function QuizContainer({
   onReset,
 }: QuizContainerProps) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userAnswers, setUserAnswers] = useState<UserAnswers>({});
-  const [isComplete, setIsComplete] = useState(false); // State for showing results
-  // State to control feedback visibility for the *current* question
-  const [showFeedback, setShowFeedback] = useState(false);
+  const [userAnswers, setUserAnswers] = useState<Record<string, number>>({});
+  const [isComplete, setIsComplete] = useState(false);
 
+  const currentQuestion = quizData.questions[currentQuestionIndex];
   const totalQuestions = quizData.questions.length;
+  const answeredQuestions = Object.keys(userAnswers).length;
 
-  // Memoize current question data for stability
-  const currentQuestion = useMemo(() => {
-    if (totalQuestions > 0 && currentQuestionIndex < totalQuestions) {
-      return quizData.questions[currentQuestionIndex];
-    }
-    return null;
-  }, [quizData.questions, currentQuestionIndex, totalQuestions]);
-
-  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
-
-  // Calculate if the current answer (if any) is correct
-  const isCurrentAnswerCorrect = useMemo(() => {
-    if (!currentQuestion || !userAnswers[currentQuestion.id]) return undefined;
-    return userAnswers[currentQuestion.id] === currentQuestion.correctAnswer;
-  }, [currentQuestion, userAnswers]);
-
-  // Handle option selection - hide feedback when a new option is chosen
-  const handleOptionSelect = (questionId: string, optionIndex: number) => {
-    setShowFeedback(false); // Hide feedback for previous state if user changes answer
-    setUserAnswers((prevAnswers) => ({
-      ...prevAnswers,
-      [questionId]: optionIndex,
+  const handleOptionSelect = (questionId: string, optionId: number) => {
+    setUserAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionId,
     }));
   };
 
-  // Handle moving to the next question or submitting
-  const handleNextOrSubmit = () => {
-    if (!currentQuestion) return;
-
-    // 1. Show feedback for the current question
-    setShowFeedback(true);
-
-    // 2. Wait briefly to show feedback, then proceed
-    setTimeout(() => {
-      if (isLastQuestion) {
-        // Submit the quiz
-        console.log("Quiz Submitted!", userAnswers);
-        setIsComplete(true);
-        onQuizComplete(userAnswers);
-      } else {
-        // Move to the next question
-        setCurrentQuestionIndex((prevIndex) => prevIndex + 1);
-        setShowFeedback(false); // Reset feedback visibility for the new question
-      }
-    }, 1500); // Show feedback for 1.5 seconds
+  const handleQuestionNavigation = (index: number) => {
+    setCurrentQuestionIndex(index);
   };
 
-  // Handle previous question - simply move index, hide feedback
-  const handlePreviousQuestion = () => {
-    if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex((prevIndex) => prevIndex - 1);
-      setShowFeedback(false); // Ensure feedback is hidden when going back
-    }
+  const handleQuizComplete = () => {
+    setIsComplete(true);
+    onQuizComplete(userAnswers);
   };
 
-  // Handle retake - reset everything including feedback
-  const handleRetakeQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setUserAnswers({});
-    setIsComplete(false);
-    setShowFeedback(false);
+  const isQuestionAnswered = (questionId: string) => {
+    return questionId in userAnswers;
+  };
+
+  const isAnswerCorrect = (questionId: string) => {
+    const question = quizData.questions.find((q) => q.id === questionId);
+    return question && userAnswers[questionId] === question.correctAnswer;
   };
 
   // --- Render Loading/Error/No Questions States ---
@@ -125,7 +93,11 @@ export function QuizContainer({
       <QuizResults
         quizData={quizData}
         userAnswers={userAnswers}
-        onRetake={handleRetakeQuiz}
+        onRetake={() => {
+          setUserAnswers({});
+          setCurrentQuestionIndex(0);
+          setIsComplete(false);
+        }}
         onReset={onReset}
       />
     );
@@ -133,81 +105,51 @@ export function QuizContainer({
 
   // --- Render Question View ---
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* Header: Exit button */}
-      <div className="flex justify-end items-center">
-        <Button
-          onClick={onReset}
-          variant="ghost"
-          size="sm"
-          className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-          disabled={showFeedback} // Disable exit while feedback is showing
-        >
-          <Home className="mr-1.5 h-4 w-4" />
-          Exit Quiz
-        </Button>
+    <div className="space-y-8">
+      <div className="flex flex-col items-center space-y-4">
+        <h1 className="text-2xl font-bold text-slate-900">{quizData.title}</h1>
+        <div className="flex flex-wrap justify-center gap-2">
+          {quizData.questions.map((question, index) => (
+            <Button
+              key={question.id}
+              variant="outline"
+              className={cn(
+                "h-10 w-10 p-0",
+                index === currentQuestionIndex && "border-2 border-blue-500",
+                isQuestionAnswered(question.id) &&
+                  isAnswerCorrect(question.id) &&
+                  "bg-green-100 text-green-700 hover:bg-green-200",
+                isQuestionAnswered(question.id) &&
+                  !isAnswerCorrect(question.id) &&
+                  "bg-red-100 text-red-700 hover:bg-red-200"
+              )}
+              onClick={() => handleQuestionNavigation(index)}
+            >
+              {index + 1}
+            </Button>
+          ))}
+        </div>
       </div>
 
-      {/* Progress Bar */}
-      <QuizProgressBar
-        current={currentQuestionIndex + 1}
-        total={totalQuestions}
-      />
+      {currentQuestion && (
+        <QuizQuestionCard
+          question={currentQuestion}
+          selectedOptionId={userAnswers[currentQuestion.id]}
+          onOptionSelect={(questionId: string, optionIndex: number) =>
+            handleOptionSelect(questionId, optionIndex)
+          }
+          isCorrect={
+            isQuestionAnswered(currentQuestion.id) &&
+            isAnswerCorrect(currentQuestion.id)
+          }
+        />
+      )}
 
-      {/* Question Card - Pass feedback props */}
-      <QuizQuestionCard
-        question={currentQuestion}
-        selectedOptionId={userAnswers[currentQuestion.id]}
-        onOptionSelect={handleOptionSelect}
-        showFeedback={showFeedback}
-        isCorrect={isCurrentAnswerCorrect}
-      />
-
-      {/* Navigation Buttons */}
-      <div className="flex justify-between items-center mt-4">
-        <Button
-          variant="outline"
-          onClick={handlePreviousQuestion}
-          disabled={currentQuestionIndex === 0 || showFeedback} // Disable while feedback showing
-          className="border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Previous
-        </Button>
-        <Button
-          onClick={handleNextOrSubmit}
-          className={cn(
-            "text-white",
-            // Change color based on feedback state if shown
-            showFeedback &&
-              isCurrentAnswerCorrect === true &&
-              "bg-green-600 hover:bg-green-700",
-            showFeedback &&
-              isCurrentAnswerCorrect === false &&
-              "bg-red-600 hover:bg-red-700",
-            !showFeedback && "bg-blue-600 hover:bg-blue-700" // Default blue
-          )}
-          // Disable button if no answer selected OR if feedback is currently being shown
-          disabled={!userAnswers[currentQuestion.id] || showFeedback}
-        >
-          {/* Change button text while feedback is showing */}
-          {showFeedback ? (
-            isLastQuestion ? (
-              "Finishing..."
-            ) : (
-              "Next Question..."
-            )
-          ) : isLastQuestion ? (
-            <>
-              Submit Quiz <CheckCircle className="ml-2 h-4 w-4" />
-            </>
-          ) : (
-            <>
-              Next <ArrowRight className="ml-2 h-4 w-4" />
-            </>
-          )}
-        </Button>
-      </div>
+      {answeredQuestions === totalQuestions && (
+        <div className="flex justify-center">
+          <Button onClick={handleQuizComplete}>Complete Quiz</Button>
+        </div>
+      )}
     </div>
   );
 }
