@@ -1,3 +1,4 @@
+import { toast } from "@/hooks/useToast";
 import {
   QuestionnaireStatus,
   QuestionnaireResult,
@@ -71,7 +72,14 @@ export class QuestionnaireTracker {
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      toast({
+        title: 'Something went wrong',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+      return [];
+    }
     return data || [];
   }
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useAuth } from './useAuth';
+import { toast } from './useToast';
 
 const supabase = createClient();
 
@@ -143,8 +144,8 @@ export function useQuizLimits(): UseQuizLimitsReturn {
           last_created_at: new Date().toISOString(),
         });
 
-      if (error) throw error;
-
+      if (error)return;
+    
       setQuizUsage({
         quizzes_created: newCount,
         last_created_at: new Date().toISOString(),
@@ -152,7 +153,7 @@ export function useQuizLimits(): UseQuizLimitsReturn {
       });
     } catch (error) {
       console.error('Error incrementing quiz count:', error);
-      throw error;
+      return;
     }
   }, [isAuthenticated, quizUsage, user?.id, incrementAnonymousCount]);
 

@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useQuizLimits } from './useQuizLimits';
+import { toast } from './useToast';
 
 const supabase = createClient();
 
@@ -58,10 +59,16 @@ export function useQuizManager() {
       .select('id')
       .single();
 
-    if (error) throw error;
+    if (error) {
+      toast({
+        title: 'Something went wrong',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+    }
 
     await incrementQuizCount();
-    return quiz.id;
+    return quiz?.id;
   }, [user?.id, checkQuizLimit, incrementQuizCount]);
 
   // Save quiz questions
@@ -73,7 +80,14 @@ export function useQuizManager() {
       .from('quiz_questions')
       .insert(questions.map(q => ({ ...q, quiz_id: quizId })));
 
-    if (error) throw error;
+    if (error) {
+      toast({
+        title: 'Something went wrong',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+      return;
+    }
   }, []);
 
   // Save quiz result
@@ -92,7 +106,14 @@ export function useQuizManager() {
         questionnaire_type: 'quiz'
       });
 
-    if (error) throw error;
+    if (error) {
+      toast({
+        title: 'Something went wrong',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     // Update user profile quiz count if authenticated
     if (isAuthenticated) {
@@ -134,7 +155,14 @@ export function useQuizManager() {
       .eq('user_id', user?.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      toast({
+        title: 'Something went wrong',
+        description: 'Please try again later',
+        variant: 'destructive',
+      });
+      return [];
+    }
     return data;
   }, [user?.id, isAuthenticated]);
 

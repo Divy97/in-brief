@@ -25,22 +25,24 @@ export function AuthForm({ type }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { signIn, signUp, error } = useAuthContext();
+  const { signIn, signUp } = useAuthContext();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect_to") || "/";
+  const isSignUp = type === "sign-up";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      if (type === "sign-in") {
-        await signIn(email, password);
-      } else {
-        await signUp(email, password);
+      const success = isSignUp
+        ? await signUp(email, password)
+        : await signIn(email, password);
+
+      if (success) {
+        router.push(redirectTo);
       }
-      router.push(redirectTo);
     } catch (error) {
       console.error("Authentication error:", error);
     } finally {
@@ -85,7 +87,6 @@ export function AuthForm({ type }: AuthFormProps) {
               required
             />
           </div>
-          {error && <div className="text-sm text-red-500">{error.message}</div>}
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
           <Button type="submit" className="w-full" disabled={isLoading}>

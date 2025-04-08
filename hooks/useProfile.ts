@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { useAuthContext } from '@/contexts/AuthContext';
+import { toast } from './useToast';
 
 const supabase = createClient();
 
@@ -161,11 +162,18 @@ export function useProfile() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: 'Error updating profile',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
       setProfile(data);
     } catch (err) {
       console.error('Error updating profile:', err);
-      throw err;
+      return;
     }
   }, [user?.id]);
 
@@ -181,11 +189,18 @@ export function useProfile() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: 'Error updating preferences',
+          description: error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
       setPreferences(data);
     } catch (err) {
       console.error('Error updating preferences:', err);
-      throw err;
+      return;
     }
   }, [user?.id]);
 

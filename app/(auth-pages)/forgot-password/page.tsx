@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSent, setIsSent] = useState(false);
-  const { resetPassword, error } = useAuthContext();
+  const { resetPassword } = useAuthContext();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,9 +78,6 @@ export default function ForgotPasswordPage() {
                 required
               />
             </div>
-            {error && (
-              <div className="mt-2 text-sm text-red-500">{error.message}</div>
-            )}
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
