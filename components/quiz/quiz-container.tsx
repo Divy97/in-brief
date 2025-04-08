@@ -41,15 +41,15 @@ export function QuizContainer({
   const totalQuestions = quizData.questions.length;
   const answeredQuestions = Object.keys(userAnswers).length;
 
+  const handleQuestionNavigation = (index: number) => {
+    setCurrentQuestionIndex(index);
+  };
+
   const handleOptionSelect = (questionId: string, optionId: number) => {
     setUserAnswers((prev) => ({
       ...prev,
       [questionId]: optionId,
     }));
-  };
-
-  const handleQuestionNavigation = (index: number) => {
-    setCurrentQuestionIndex(index);
   };
 
   const handleQuizComplete = () => {
@@ -69,7 +69,7 @@ export function QuizContainer({
   // --- Render Loading/Error/No Questions States ---
   if (totalQuestions === 0) {
     return (
-      <div className="w-full max-w-2xl mx-auto mt-12 text-center p-8 border rounded-lg bg-slate-50">
+      <div className="h-full flex flex-col items-center justify-center">
         <p className="text-slate-600">
           No questions were generated for this content.
         </p>
@@ -105,7 +105,7 @@ export function QuizContainer({
 
   // --- Render Question View ---
   return (
-    <div className="space-y-8">
+    <div className="h-[88vh] flex flex-col items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
         <h1 className="text-2xl font-bold text-slate-900">{quizData.title}</h1>
         <div className="flex flex-wrap justify-center gap-2">
@@ -133,8 +133,13 @@ export function QuizContainer({
 
       {currentQuestion && (
         <QuizQuestionCard
+          key={currentQuestion.id}
           question={currentQuestion}
-          selectedOptionId={userAnswers[currentQuestion.id]}
+          selectedOptionId={
+            isQuestionAnswered(currentQuestion.id)
+              ? userAnswers[currentQuestion.id]
+              : undefined
+          }
           onOptionSelect={(questionId: string, optionIndex: number) =>
             handleOptionSelect(questionId, optionIndex)
           }
@@ -146,7 +151,7 @@ export function QuizContainer({
       )}
 
       {answeredQuestions === totalQuestions && (
-        <div className="flex justify-center">
+        <div className="flex justify-center mt-10">
           <Button onClick={handleQuizComplete}>Complete Quiz</Button>
         </div>
       )}

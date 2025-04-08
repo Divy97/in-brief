@@ -27,11 +27,8 @@ export function QuizQuestionCard({
       </CardHeader>
       <CardContent className="p-6">
         <RadioGroup
-          value={
-            selectedOptionId !== undefined
-              ? selectedOptionId.toString()
-              : undefined
-          }
+          key={question.id}
+          value={selectedOptionId?.toString()}
           onValueChange={(value) =>
             onOptionSelect(question.id, parseInt(value, 10))
           }
@@ -45,7 +42,7 @@ export function QuizQuestionCard({
 
             return (
               <div
-                key={option.id}
+                key={`${question.id}-${index}`}
                 className={cn(
                   "relative overflow-hidden rounded-xl border-2 transition-all duration-300",
                   !showFeedback &&

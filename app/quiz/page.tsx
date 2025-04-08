@@ -130,7 +130,7 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="h-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-50 px-4 py-6 sm:px-6 mt-14">
+    <div className="h-max-screen flex items-center justify-center bg-gradient-to-b from-white to-slate-50 px-4 py-6 sm:px-6 mt-14">
       <QuizContainer
         quizData={quizData}
         onQuizComplete={handleQuizComplete}
