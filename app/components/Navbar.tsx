@@ -13,9 +13,11 @@ import { User, LogOut, Settings, UserCircle, ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Icons } from "@/components/ui/icons";
 
 export function Navbar() {
-  const { isAuthenticated, signOut, loading, user } = useAuthContext();
+  const { isAuthenticated, signOut, loading, user, signInWithGoogle } =
+    useAuthContext();
   const [mounted, setMounted] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -43,87 +45,69 @@ export function Navbar() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div className="h-16 px-4 border-b flex items-center justify-between">
+        <Skeleton className="h-8 w-[100px]" />
+        <Skeleton className="h-8 w-[100px]" />
+      </div>
+    );
+  }
+
   return (
-    <header
+    <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
-        isScrolled
-          ? "h-16 border-b bg-white/90 backdrop-blur-md shadow-sm"
-          : "h-20 border-b bg-white/75 backdrop-blur-sm"
+        "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+        isScrolled && "shadow-sm"
       )}
     >
-      <nav className="container mx-auto px-4 h-full flex items-center justify-between">
-        <Link
-          href="/"
-          className="font-bold text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
-        >
+      <div className="container flex h-16 items-center justify-between">
+        <Link href="/" className="font-semibold text-lg">
           InBrief
         </Link>
 
         <div className="flex items-center gap-4">
-          {!mounted ? (
-            <Skeleton className="h-9 w-20 rounded-md" />
-          ) : loading ? (
-            <Skeleton className="h-9 w-20 rounded-md" />
+          {loading ? (
+            <Skeleton className="h-9 w-[100px]" />
           ) : isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="flex items-center gap-2 rounded-full hover:bg-gray-100 transition-colors"
-                >
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white font-medium">
-                    {user?.email?.[0]?.toUpperCase() || (
-                      <User className="h-4 w-4" />
-                    )}
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-gray-500" />
+                <Button variant="ghost" className="relative">
+                  {user?.email}
+                  <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 p-2">
-                <div className="px-2 py-1.5 text-sm font-medium text-gray-500">
-                  {user?.email}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-2 w-full"
-                  >
-                    <UserCircle className="h-4 w-4" />
-                    <span>Profile</span>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="cursor-pointer">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    Profile
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild className="cursor-pointer">
-                  <Link
-                    href="/settings"
-                    className="flex items-center gap-2 w-full"
-                  >
-                    <Settings className="h-4 w-4" />
-                    <span>Settings</span>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-600 cursor-pointer flex items-center gap-2"
                   onClick={handleSignOut}
+                  className="cursor-pointer"
                 >
-                  <LogOut className="h-4 w-4" />
-                  <span>Sign out</span>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button
-              asChild
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 transition-all"
-            >
-              <Link href="/sign-in">Sign in</Link>
+            <Button variant="outline" onClick={signInWithGoogle}>
+              <Icons.google className="mr-2 h-4 w-4" />
+              Sign in with Google
             </Button>
           )}
         </div>
-      </nav>
-    </header>
+      </div>
+    </nav>
   );
 }

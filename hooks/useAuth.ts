@@ -11,11 +11,8 @@ export interface UseAuthReturn {
   loading: boolean;
   error: AuthError | null;
   isAuthenticated: boolean;
-  signIn: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string) => Promise<boolean>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<boolean>;
-  resetPassword: (email: string) => Promise<boolean>;
-  updatePassword: (newPassword: string) => Promise<boolean>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -53,55 +50,31 @@ export function useAuth(): UseAuthReturn {
     initializeAuth();
   }, [toast]);
 
-  const signIn = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const signInWithGoogle = useCallback(async () => {
     try {
       setError(null);
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        throw error;
-      }
-      router.refresh();
-      return true;
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Sign In Failed",
-        description: 'Please check your credentials and try again',
-      });
-      setError(error as AuthError);
-      return false;
-    }
-  }, [router, toast]);
-
-  const signUp = useCallback(async (email: string, password: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         },
       });
+
       if (error) {
         toast({
           variant: "destructive",
-          title: "Sign Up Failed",
+          title: "Sign In Failed",
           description: error.message,
         });
-        return false;
+        setError(error);
       }
-      toast({
-        title: "Sign Up Successful",
-        description: "Please check your email to verify your account.",
-      });
-      return true;
     } catch (error) {
+      console.error('Error signing in with Google:', error);
       setError(error as AuthError);
-      return false;
     }
   }, [toast]);
 
@@ -125,66 +98,12 @@ export function useAuth(): UseAuthReturn {
     }
   }, [router, toast]);
 
-  const resetPassword = useCallback(async (email: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/protected/reset-password`,
-      });
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Password Reset Failed",
-          description: error.message,
-        });
-        return false;
-      }
-      toast({
-        title: "Password Reset Email Sent",
-        description: "Please check your email for the password reset link.",
-      });
-      return true;
-    } catch (error) {
-      setError(error as AuthError);
-      return false;   
-    }
-  }, [toast]);
-
-  const updatePassword = useCallback(async (newPassword: string): Promise<boolean> => {
-    try {
-      setError(null);
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (error) {
-        toast({
-          variant: "destructive",
-          title: "Password Update Failed",
-          description: error.message,
-        });
-        return false;
-      }
-      toast({
-        title: "Password Updated",
-        description: "Your password has been successfully updated.",
-      });
-      router.push('/');
-      return true;
-    } catch (error) {
-      setError(error as AuthError);
-      return false;
-    }
-  }, [router, toast]);
-
   return {
     user,
     loading,
     error,
     isAuthenticated: !!user,
-    signIn,
-    signUp,
+    signInWithGoogle,
     signOut,
-    resetPassword,
-    updatePassword,
   };
 } 

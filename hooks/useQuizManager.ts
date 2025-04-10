@@ -65,6 +65,7 @@ export function useQuizManager() {
         description: 'Please try again later',
         variant: 'destructive',
       });
+      throw error;
     }
 
     await incrementQuizCount();
@@ -86,7 +87,7 @@ export function useQuizManager() {
         description: 'Please try again later',
         variant: 'destructive',
       });
-      return;
+      throw error;
     }
   }, []);
 
@@ -112,32 +113,29 @@ export function useQuizManager() {
         description: 'Please try again later',
         variant: 'destructive',
       });
-      return;
+      throw error;
     }
+  }, [user?.id]);
 
-    // Update user profile quiz count if authenticated
-    if (isAuthenticated) {
-      // First get current count
-      const { data: profile, error: fetchError } = await supabase
-        .from('user_profiles')
-        .select('quizzes_taken')
-        .eq('id', user?.id)
-        .single();
+  // Get quiz details
+  const getQuizDetails = useCallback(async (quizId: string) => {
+    const { data: quiz, error: quizError } = await supabase
+      .from('quizzes')
+      .select('*')
+      .eq('id', quizId)
+      .single();
 
-      if (fetchError) throw fetchError;
+    if (quizError) throw quizError;
 
-      // Then update with incremented count
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({
-          quizzes_taken: (profile?.quizzes_taken || 0) + 1,
-          last_quiz_at: new Date().toISOString(),
-        })
-        .eq('id', user?.id);
+    const { data: questions, error: questionsError } = await supabase
+      .from('quiz_questions')
+      .select('*')
+      .eq('quiz_id', quizId);
 
-      if (updateError) throw updateError;
-    }
-  }, [user?.id, isAuthenticated]);
+    if (questionsError) throw questionsError;
+
+    return { quiz, questions };
+  }, []);
 
   // Get user's quiz history
   const getUserQuizHistory = useCallback(async () => {
@@ -163,34 +161,15 @@ export function useQuizManager() {
       });
       return [];
     }
+
     return data;
   }, [user?.id, isAuthenticated]);
-
-  // Get quiz details with questions
-  const getQuizDetails = useCallback(async (quizId: string) => {
-    const { data: quiz, error: quizError } = await supabase
-      .from('quizzes')
-      .select('*')
-      .eq('id', quizId)
-      .single();
-
-    if (quizError) throw quizError;
-
-    const { data: questions, error: questionsError } = await supabase
-      .from('quiz_questions')
-      .select('*')
-      .eq('quiz_id', quizId);
-
-    if (questionsError) throw questionsError;
-
-    return { quiz, questions };
-  }, []);
 
   return {
     createQuiz,
     saveQuizQuestions,
     saveQuizResult,
-    getUserQuizHistory,
     getQuizDetails,
+    getUserQuizHistory,
   };
 } 

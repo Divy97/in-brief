@@ -5,10 +5,9 @@ import { toast } from './useToast';
 
 const supabase = createClient();
 
-interface QuizUsage {
-  quizzes_created: number;
-  last_created_at: string;
-  date: string;
+interface UserProfile {
+  quizzes_taken: number;
+  last_quiz_at: string;
 }
 
 export interface UseQuizLimitsReturn {
@@ -20,12 +19,12 @@ export interface UseQuizLimitsReturn {
   getAnonymousQuizCount: () => number;
 }
 
-const DAILY_LIMIT = 3;
+const DAILY_LIMIT = 1;
 const ANONYMOUS_LIMIT = 1;
 
 export function useQuizLimits(): UseQuizLimitsReturn {
   const { user, isAuthenticated } = useAuth();
-  const [quizUsage, setQuizUsage] = useState<QuizUsage | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Get anonymous quiz count from localStorage
@@ -42,7 +41,7 @@ export function useQuizLimits(): UseQuizLimitsReturn {
       return 0;
     }
 
-    return parseInt(count || '0', 10);
+    return parseInt(count || '0');
   }, []);
 
   // Increment anonymous quiz count
@@ -54,37 +53,57 @@ export function useQuizLimits(): UseQuizLimitsReturn {
     localStorage.setItem('anonymousQuizDate', today);
   }, [getAnonymousQuizCount]);
 
-  // Fetch quiz usage for authenticated users
+  // Fetch user profile for authenticated users
   useEffect(() => {
-    const fetchQuizUsage = async () => {
+    const fetchUserProfile = async () => {
       if (!isAuthenticated) {
         setIsLoading(false);
         return;
       }
 
       try {
-        const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
-          .from('quiz_usage')
-          .select('quizzes_created, last_created_at, date')
-          .eq('user_id', user?.id)
-          .eq('date', today)
+          .from('user_profiles')
+          .select('quizzes_taken, last_quiz_at')
+          .eq('id', user?.id)
           .single();
 
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching quiz usage:', error);
+        if (error) {
+          console.error('Error fetching user profile:', error);
           return;
         }
 
-        setQuizUsage(data || { quizzes_created: 0, last_created_at: new Date().toISOString(), date: today });
+        // Check if it's a new day since last quiz
+        const lastQuizDate = data.last_quiz_at ? new Date(data.last_quiz_at).toISOString().split('T')[0] : null;
+        const today = new Date().toISOString().split('T')[0];
+
+        if (lastQuizDate !== today) {
+          // Reset quiz count for new day
+          const { error: updateError } = await supabase
+            .from('user_profiles')
+            .update({
+              quizzes_taken: 0,
+              last_quiz_at: new Date().toISOString()
+            })
+            .eq('id', user?.id);
+
+          if (updateError) {
+            console.error('Error resetting quiz count:', updateError);
+            return;
+          }
+
+          setUserProfile({ quizzes_taken: 0, last_quiz_at: new Date().toISOString() });
+        } else {
+          setUserProfile(data);
+        }
       } catch (error) {
-        console.error('Error fetching quiz usage:', error);
+        console.error('Error fetching user profile:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchQuizUsage();
+    fetchUserProfile();
   }, [user?.id, isAuthenticated]);
 
   // Check if user can create a quiz
@@ -94,35 +113,8 @@ export function useQuizLimits(): UseQuizLimitsReturn {
       return anonymousCount < ANONYMOUS_LIMIT;
     }
 
-    // For authenticated users, check if we need to reset the count for a new day
-    const today = new Date().toISOString().split('T')[0];
-    if (quizUsage && quizUsage.date !== today) {
-      // It's a new day, reset the count
-      const { error } = await supabase
-        .from('quiz_usage')
-        .upsert({
-          user_id: user?.id,
-          date: today,
-          quizzes_created: 0,
-          last_created_at: new Date().toISOString(),
-        });
-
-      if (error) {
-        console.error('Error resetting quiz usage:', error);
-        return false;
-      }
-
-      setQuizUsage({
-        quizzes_created: 0,
-        last_created_at: new Date().toISOString(),
-        date: today,
-      });
-
-      return true;
-    }
-
-    return (quizUsage?.quizzes_created || 0) < DAILY_LIMIT;
-  }, [isAuthenticated, quizUsage, user?.id, getAnonymousQuizCount]);
+    return (userProfile?.quizzes_taken || 0) < DAILY_LIMIT;
+  }, [isAuthenticated, userProfile, getAnonymousQuizCount]);
 
   // Increment quiz count
   const incrementQuizCount = useCallback(async () => {
@@ -131,39 +123,39 @@ export function useQuizLimits(): UseQuizLimitsReturn {
       return;
     }
 
-    const today = new Date().toISOString().split('T')[0];
-    const newCount = (quizUsage?.quizzes_created || 0) + 1;
-
     try {
-      const { error } = await supabase
-        .from('quiz_usage')
-        .upsert({
-          user_id: user?.id,
-          date: today,
-          quizzes_created: newCount,
-          last_created_at: new Date().toISOString(),
-        });
+      const newCount = (userProfile?.quizzes_taken || 0) + 1;
 
-      if (error)return;
-    
-      setQuizUsage({
-        quizzes_created: newCount,
-        last_created_at: new Date().toISOString(),
-        date: today,
-      });
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          quizzes_taken: newCount,
+          last_quiz_at: new Date().toISOString()
+        })
+        .eq('id', user?.id);
+
+      if (error) {
+        console.error('Error incrementing quiz count:', error);
+        return;
+      }
+
+      setUserProfile(prev => ({
+        ...prev!,
+        quizzes_taken: newCount,
+        last_quiz_at: new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error incrementing quiz count:', error);
-      return;
     }
-  }, [isAuthenticated, quizUsage, user?.id, incrementAnonymousCount]);
+  }, [isAuthenticated, userProfile, user?.id, incrementAnonymousCount]);
 
   const remainingQuizzes = isAuthenticated
-    ? DAILY_LIMIT - (quizUsage?.quizzes_created || 0)
+    ? DAILY_LIMIT - (userProfile?.quizzes_taken || 0)
     : ANONYMOUS_LIMIT - getAnonymousQuizCount();
 
   return {
     canCreateQuiz: isAuthenticated 
-      ? (quizUsage?.quizzes_created || 0) < DAILY_LIMIT
+      ? (userProfile?.quizzes_taken || 0) < DAILY_LIMIT
       : getAnonymousQuizCount() < ANONYMOUS_LIMIT,
     remainingQuizzes,
     isLoading,

@@ -12,12 +12,14 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { useQuizManager } from "@/hooks/useQuizManager";
 import { useQuizLimits } from "@/hooks/useQuizLimits";
 import { SignUpPrompt } from "@/components/auth/SignUpPrompt";
+import { QuizLimitDialog } from "@/components/QuizLimitDialog";
 
 export default function Home() {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
+  const [showLimitDialog, setShowLimitDialog] = useState(false);
   const router = useRouter();
 
   const { isAuthenticated } = useAuthContext();
@@ -33,9 +35,7 @@ export default function Home() {
       if (!isAuthenticated) {
         setShowSignUpPrompt(true);
       } else {
-        setError(
-          "You've reached your daily quiz limit. Please try again tomorrow."
-        );
+        setShowLimitDialog(true);
       }
       setIsLoading(false);
       return;
@@ -95,6 +95,10 @@ export default function Home() {
       {showSignUpPrompt && (
         <SignUpPrompt onDismiss={() => setShowSignUpPrompt(false)} />
       )}
+      <QuizLimitDialog
+        isOpen={showLimitDialog}
+        onClose={() => setShowLimitDialog(false)}
+      />
       <div className="w-full max-w-3xl mx-auto space-y-6 sm:space-y-8">
         <div className="text-center space-y-2 sm:space-y-3">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent leading-tight">

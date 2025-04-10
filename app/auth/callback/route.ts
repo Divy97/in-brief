@@ -10,9 +10,14 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get("code");
 
   if (code) {
-    const cookieStore = cookies();
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore });
-    await supabase.auth.exchangeCodeForSession(code);
+    const supabase = createRouteHandlerClient({ cookies });
+    
+    try {
+      await supabase.auth.exchangeCodeForSession(code);
+    } catch (error) {
+      console.error('Error exchanging code for session:', error);
+      return NextResponse.redirect(new URL('/sign-in?error=auth_callback_error', request.url));
+    }
   }
 
   // URL to redirect to after sign in process completes

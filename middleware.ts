@@ -14,8 +14,7 @@ export async function middleware(req: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => req.nextUrl.pathname.startsWith(route));
 
   // Auth routes that should redirect if user is already authenticated
-  const authRoutes = ['/sign-in', '/sign-up', '/forgot-password'];
-  const isAuthRoute = authRoutes.some(route => req.nextUrl.pathname.startsWith(route));
+  const isAuthRoute = req.nextUrl.pathname.startsWith('/sign-in');
 
   // Handle protected routes
   if (isProtectedRoute && !session) {

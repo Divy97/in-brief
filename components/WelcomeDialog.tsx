@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { Icons } from "./ui/icons";
 
 const WELCOME_DIALOG_KEY = "welcome_dialog_shown";
 
@@ -33,6 +35,7 @@ const features = [
 export function WelcomeDialog() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
+  const { signInWithGoogle } = useAuthContext();
 
   useEffect(() => {
     const hasShown = localStorage.getItem(WELCOME_DIALOG_KEY);
@@ -77,12 +80,20 @@ export function WelcomeDialog() {
             ))}
           </div>
         </div>
-        <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={handleDismiss}>
-            Maybe later
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              signInWithGoogle();
+              handleDismiss();
+            }}
+          >
+            <Icons.google className="mr-2 h-4 w-4" />
+            Sign in with Google
           </Button>
-          <Button asChild>
-            <Link href="/sign-up">Create free account</Link>
+          <Button variant="ghost" className="w-full" onClick={handleDismiss}>
+            Maybe Later
           </Button>
         </DialogFooter>
       </DialogContent>
